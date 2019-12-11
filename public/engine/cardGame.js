@@ -21,11 +21,11 @@ export class cardGame {
         this.playerwon = false;
 
         //stuff for the AI
-        this.aiStance=''
-        this.maxaiPlay=''
-        this.aiPlayedCards=''
-        this.maxManaUse=''
-        this.aimanaUsed=''
+        this.aiStance='';
+        this.maxaiPlay=0;
+        this.aiPlayedCards=0;
+        this.maxManaUse=0;
+        this.aimanaUsed=0;
     }
     //call start method to start a new game
     start() {
@@ -45,13 +45,22 @@ export class cardGame {
             this.first = 'ai';
             this.playerturn = false;
         }
+        if(this.first==='ai'){
+            this.AI();
+        }
     }
     endTurn() {
         this.turn+=1;
         if (this.playerturn === true) {
             this.playerturn = false
+            if(this.aihand.length<=5){
+                this.draw(false,this.aihand)
+            }
         } else {
             this.playerturn = true;
+            if(this.aihand.length<=5){
+                this.draw(false,this.aihand)
+            }
         }
 
     }
@@ -97,17 +106,34 @@ export class cardGame {
             console.log('ran1')
             this.playerMana = this.playerMana - this.playerhand[cardIndex].cost;
             this.playerboard.push(this.playerhand[cardIndex]);
-            this.playerhand.splice(cardIndex, 1)
+            this.playerhand.splice(cardIndex, 1);
+            if(this.playerboard[this.playerboard.length-1].type==='heal'){
+               // temp heal benefit
+                this.playerMana+=10;
+                this.destroyed(this.playerboard.length-1,true)
+            }
+            if(this.playerboard[this.playerboard.length-1].type==='hurt'){
+                // temp hurt benefit
+                this.aiMana-=10;
+                this.destroyed(this.playerboard.length-1,true)
+            }
             console.log('ran2')
         } else {
             this.aiMana = this.aiMana - this.aihand[cardIndex].cost;
             this.aiboard.push(this.aihand[cardIndex]);
             this.aihand.splice(cardIndex, 1)
+            if(this.aiboard[this.aiboard.length-1].type==='heal'){
+                // temp heal benefit
+                this.aiMana+=10;
+                this.destroyed(this.aiboard.length-1,false)
+            }
+            if(this.aiboard[this.aiboard.length-1].type==='hurt'){
+                // temp hurt benefit
+                this.playerMana-=10;
+                this.destroyed(this.aiboard.length-1,false)
+            }
         }
-console.log('board')
 console.log(this.playerboard)
-console.log('hand')
-console.log(this.playerhand)
     }
     //playersCard: is the card being destroyed belonging to the player
     destroyed(cardIndex, playersCard) {
@@ -169,35 +195,117 @@ and if decision tree conditions are met it will follow those conditions and rewe
     this.aimanaUsed=
 */
     AI(){
+        this.aimanaUsed=0;
+        this.aiPlayedCards=0;
         // determine AI Stance
-        if ( (this.first ==='ai' && this.turn===0) || (this.first==='ai'&&this.turn===1) ){
+        if ( (this.first ==='ai' && this.turn===0) || (this.first==='player'&&this.turn===1) ){
             this.aiStance='setup'
+            this.maxaiPlay=2;
+            this.maxManaUse=20;
         }
         else if(this.playerboard.length >3){
             // AI tries to kill your monsters
             this.aiStance= 'clearBoard';
+            this.maxaiPlay=3;
+            this.maxManaUse=30;
+
         }
         else if(this.aiMana <=50 || this.aiboard.length <=0){
             this.aiStance='defensive';
+            this.maxaiPlay=4;
+            this.maxManaUse=10;
         } else if(this.playerboard.length<=1 || this.playerMana<=50){
         this.aiStance='aggressive';
+            this.maxaiPlay=3;
+            this.maxManaUse=30;
         }else{
             this.aiStance='neutral';
+            this.maxaiPlay=2;
+            this.maxManaUse=20;
         }
         // determine AI Moves
     if(this.aiStance==='setup'){
 
+    for(let i=0; i<this.aihand.length;i++){
+        if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+            break;
+        }
+        if( (this.aihand[i].type ==='legendary creature' &&this.aihand[i].cost+this.aimanaUsed<=this.maxManaUse) || (this.aihand[i].type==='creature'&&this.aihand[i].cost+this.aimanaUsed<=this.maxManaUse)){
+            this.aiPlayedCards++;
+            this.aimanaUsed+= this.aihand[i].cost;
+            this.playCard(i, false);
+        }
+    }
+    if(this.aiPlayedCards===0){
+        let healplayed=false;
+        let hurtplayed=false;
+        for(let i=0; i<this.aihand.length;i++){
+            if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+                break;
+            }
+            else if(healplayed===false &&this.aihand[i].type ==='heal'){
+                healplayed=true;
+                this.aiPlayedCards++;
+                this.aimanaUsed+= this.aihand[i].cost;
+                this.playCard(i, false);
+            }
+            else if(hurtplayed===false &&this.aihand[i].type ==='hurt'){
+                hurtplayed=true;
+                this.aiPlayedCards++;
+                this.aimanaUsed+= this.aihand[i].cost;
+                this.playCard(i, false);
+            }
+        }
+        for(let i=0; i<this.aihand.length;i++){
+            if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+                break;
+            }
+            else if( (healplayed===true&&hurtplayed===false) &&this.aihand[i].type ==='heal'){
+                this.aiPlayedCards++;
+                this.aimanaUsed+= this.aihand[i].cost;
+                this.playCard(i, false);
+            }
+            else if( (hurtplayed===true &&healplayed===false) &&this.aihand[i].type ==='hurt'){
+                this.aiPlayedCards++;
+                this.aimanaUsed+= this.aihand[i].cost;
+                this.playCard(i, false);
+            }
+        }
+        this.endTurn()
+    }
     }else if(this.aiStance==='clearBoard'){
-
+        for(let i=0; i<this.aihand.length;i++) {
+            if (this.aiPlayedCards === this.maxaiPlay || this.aimanaUsed === this.maxManaUse) {
+                break;
+            }
+            if(this.aihand.type==='hurt'&&this.aihand[i].cost+this.aimanaUsed<=this.maxManaUse){
+                this.aiPlayedCards++;
+            }
+        }
     }else if(this.aiStance==='defensive'){
+            for(let i=0; i<this.aihand.length;i++){
+                if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+                    break;
+                }
+        }
 
     }else if(this.aiStance==='aggressive'){
+            for(let i=0; i<this.aihand.length;i++){
+                if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+                    break;
+                }
+        }
 
     } else if(this.aiStance==='neutral'){
+            for(let i=0; i<this.aihand.length;i++){
+                if(this.aiPlayedCards===this.maxaiPlay ||this.aimanaUsed===this.maxManaUse){
+                    break;
+                }
+        }
+
 
     }else{
 
     }
 
     }
-}

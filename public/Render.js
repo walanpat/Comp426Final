@@ -1,8 +1,11 @@
 import { cardGame } from "./engine/cardGame.js";
 import { cardData } from "./engine/Cards.js";
+
 // assigns the authorization app to an easily typed variable bc im lazy
 let auth = firebase.auth();
 let cardgame;
+let player34 = false;
+
 //Is it ready to attack?
 let playeratt = [];
 playeratt[0] = false;
@@ -18,16 +21,19 @@ playerattacked[2] = false;
 playerattacked[3] = false;
 playerattacked[4] = false;
 
-// handles login button press 
+
+// handles login button press
 function toggleSignIn() {
-    // if user is logged in already, logs them out 
+    // if user is logged in already, logs them out
     if (auth.currentUser) {
         auth.signOut();
     } else {
         // gets email and password from submitted form 
         let email = document.getElementById('email').value;
         let password = document.getElementById('password').value;
-        auth.signInWithEmailAndPassword(email, password).catch(function (error) {
+        auth.signInWithEmailAndPassword(email, password).then(function () {
+            window.location.href = "game.html";
+        }).catch(function (error) {
             // handles sign in errors here 
             let errorCode = error.code;
             let errorMessage = error.message;
@@ -41,12 +47,14 @@ function toggleSignIn() {
     }
 }
 
-// handles sign up button press 
+// handles sign up button press
 function handleSignUp() {
     let email = document.getElementById('email').value;
     let password = document.getElementById('password').value;
     // creates user with email and password gathered above 
-    auth.createUserWithEmailAndPassword(email, password).catch(function (error) {
+    auth.createUserWithEmailAndPassword(email, password).then(function () {
+        window.location.href = "game.html";
+    }).catch(function (error) {
         // handles error here 
         let errorCode = error.code;
         let errorMessage = error.message;
@@ -59,69 +67,13 @@ function handleSignUp() {
     });
 }
 
-// handles logging in with google 
-function toggleSignInWithGoogle() {
-    // if person isn't already logged in 
-    if (!auth.currentUser) {
-        let provider = new firebase.auth.GoogleAuthProvider();
-        // signs user in 
-        auth.signInWithPopup(provider).then(function (result) {
-            // This gives you a Google Access Token. You can use it to access the Google API. 
-            let token = result.credential.accessToken;
-            let user = result.user;
-        }).catch(function (error) {
-            // handles errors 
-            let errorCode = error.code;
-            let errorMessage = error.message;
-            // The provider account's email address 
-            let email = error.email;
-            // the pending google credential 
-            let credential = error.credential;
-            if (errorCode === 'auth/account-exists-with-different-credential') {
-                alert('You have already signed up with a different auth provider for that email.');
-                // hande linking user accounts signed up with multiple auth providers here 
-                // User's email already exists.
-                // Asks the user their password.
-                var password = promptUserForPassword(); // TODO: implement promptUserForPassword.
-                auth.signInWithEmailAndPassword(email, password).then(function (user) {
-                    user.linkWithCredential(credential);
-                });
-            } else {
-                console.log(error);
-            }
-        });
-    } else {
-        auth.signOut();
-    }
-}
-
-// renders login with google button *******************************************************************************************
-function onSuccess(googleUser) {
-    console.log('Logged in as: ' + googleUser.getBasicProfile().getName());
-}
-function onFailure(error) {
-    console.log(error);
-}
-function renderButton() {
-    gapi.signin2.render('my-signin2', {
-        'scope': 'profile email',
-        'width': 240,
-        'height': 50,
-        'longtitle': true,
-        'theme': 'dark',
-        'onsuccess': onSuccess,
-        'onfailure': onFailure
-    });
-}
-// ******************************************************************************************************************************
-
 // Initiate Firebase Auth.
 function initFirebaseAuth() {
     // Listen to auth state changes.
     auth.onAuthStateChanged(firebase.auth().onAuthStateChanged(user => {
         if (user) {
             window.location = 'localhost:5000/game.html'; //After successful login, user will be redirected to game.html
-            // TODO STILL NEED TO GET THIS TO WORK 
+            // TODO STILL NEED TO GET THIS TO WORK
         }
     }));
 }
@@ -130,7 +82,7 @@ function handleResetEmail() {
     let emailAddress = document.getElementById('resetEmail').value;
 
     auth.sendPasswordResetEmail(emailAddress).then(function () {
-        // email sent 
+        // email sent
     }).catch(function (error) {
         // handle errors here
         alert(error.message);
@@ -152,16 +104,16 @@ function loadGamePage() {
 
 export function landingPage() {
     const $root = $('#root');
-    //  $root.html('');
+    $root.html('');
     let page = ``
     page += `
       <div class='hero'>
           <div class='hero-content'>
               <!--The regular content-->
               <img src='' alt='logo'><br>
-              <button id="howTo">How to Play</button></a>
+              <button id="howTo">How to Play</button>
               <button id="wiki">Card Wiki</button>
-              <button id="play" type="button">Temp Play</button>
+               <button id="play">play temp</button>
               <button id="initialLoginButton" onclick="document.getElementById('loginForm').style.display='block'">Login</button>
           </div>
       </div>
@@ -180,46 +132,47 @@ export function startgame() {
 
     let wpicture = `<div id="all">`
     const loadboard = function () {
-        wpicture += `<div id="aiHealth">Enemy Health: ${cardgame.aiMana}</div>`;
+        wpicture += `<div id="aiData">AI<br><div id="aiHealth">${cardgame.aiMana}</div></div>`;
         wpicture += `<br>`;
         //Cardbacks for the AI
-        wpicture += `<div id="aiHand">`
-        for (let i = 0; i < cardgame.aihand.length; i++) {
-            // wpicture += `<div id="aihand-${i}>${cardgame.cardback}</div>`
-            wpicture += `<div id="aihand-${i}>${cardgame.aihand[i].name}</div>`
+        // wpicture += `<div id="aiHand">`
+        // for (let i = 0; i < cardgame.aihand.length; i++) {
+        //     // wpicture += `<div id="aihand-${i}>${cardgame.cardback}</div>`
+        //     wpicture += `<div id="aihand-${i}" class="aiCards">${cardgame.aihand[i].name}</div>`
 
 
-        }
-        wpicture += `</div>`;
+        // }
+        // wpicture += `</div>`;
         wpicture += `<br>`;
         //I may need to write a check, because if we're replacing the cards
         //Used with blank cards then we will need a for loop to fix shit up.
 
         //** fix fix fix fix fix  */
-        wpicture += `<div id="aiDeck"> Card Left in Enemy Deck: ${cardgame.aiDeck.length}</div>`;
+        wpicture += `<div id="aiDeck">Cards Left: ${cardgame.aiDeck.length}</div>`;
         wpicture += `<br>`;
+        wpicture += `<button id="endTurn" type="button">End Turn</button>`;
+        wpicture += `<div id="aiBoard">`;
         for (let i = 0; i < cardgame.aiboard.length; i++) {
-            wpicture += `<div id="aiboard-${i}">${cardgame.aiboard[i].name}</div>`;
-        } wpicture += `<br>`;
-
+            wpicture += `<div id="aiboard-${i}" class="aiBoardCards">${cardgame.aiboard[i].name}</div>`;
+        }
+        wpicture += `</div>`
+        wpicture += `<br>`;
         wpicture += `<div id="playerBoard">${cardgame.playerboard}</div>`;
         wpicture += `<br>`;
+        wpicture += `<div id="playerData">You<br><div id="playerHealth">${cardgame.playerMana}</div></div>`;
         //Pulls in our hand and gives each card a id of
         //playerhand-0,playerhand-1, and so forth till 6 (7 total)
-        wpicture += `<div id="playerHand">`
+        wpicture += `<div id="playerHand">`;
         ////////////////////////////////////////BIG NEED TO FIX  Draw isn't working???
         for (let i = 0; i < cardgame.playerhand.length; i++) {
             // if (cardgame.playerhand[i].id !== 50) {
             // wpicture += `<div id="playerhand-${i}>${cardgame.playerhand[i].cardimg}</div>`
-            wpicture += `<div id="playerhand-${i}"><p>${cardgame.playerhand[i].name}</p></div>`
+            wpicture += `<div id="playerhand-${i}" class="playerCards"><p>${cardgame.playerhand[i].name}</p></div>&nbsp&nbsp&nbsp&nbsp`
 
             // }
         }
-        wpicture += `<button id="endTurn" type="button">End Turn</button>`;
+        wpicture += `<div id="playerDeck">Cards Left: ${cardgame.playerDeck.length}</div>`
         wpicture += `</div>`;
-        wpicture += `<div id="playerDeck">Cards Left in your deck: ${cardgame.playerDeck.length}</div>`
-        wpicture += `<br>`;
-        wpicture += `<div id="playerHealth">Your Health: ${cardgame.playerMana}</div>`;
     }
     loadboard();
     $root.append(wpicture);
@@ -230,62 +183,74 @@ function update() {
     // startgame();
     let wpicture = `<div id="all">`
     const loadboard = function () {
-        wpicture += `<div id="aiHealth">Enemy Health: ${cardgame.aiMana}</div>`;
+        wpicture += `<div id="aiData">AI<br><div id="aiHealth">${cardgame.aiMana}</div></div>`;
         wpicture += `<br>`;
         //Cardbacks for the AI
-        wpicture += `<div id="aiHand">`
-        for (let i = 0; i < cardgame.aihand.length; i++) {
-            // wpicture += `<div id="aihand-${i}>${cardgame.cardback}</div>`
-            wpicture += `<div id="aihand-${i}>${cardgame.aihand[i].name}</div>`
+        // wpicture += `<div id="aiHand">`
+        // for (let i = 0; i < cardgame.aihand.length; i++) {
+        //     // wpicture += `<div id="aihand-${i}>${cardgame.cardback}</div>`
+        //     wpicture += `<div id="aihand-${i}" class="aiCards">${cardgame.aihand[i].name}</div>`
 
 
-        }
-        wpicture += `</div>`;
+        // }
+        // wpicture += `</div>`;
         wpicture += `<br>`;
         //I may need to write a check, because if we're replacing the cards
         //Used with blank cards then we will need a for loop to fix shit up.
 
         //** fix fix fix fix fix  */
-        wpicture += `<div id="aiDeck"> Card Left in Enemy Deck: ${cardgame.aiDeck.length}</div>`;
+        wpicture += `<div id="aiDeck">Cards Left: ${cardgame.aiDeck.length}</div>`;
         wpicture += `<br>`;
-        wpicture += `<div id="aiboard">`
+        wpicture += `<div id="aiBoard">`
         for (let i = 0; i < cardgame.aiboard.length; i++) {
-            wpicture += `<div id="aiboard-${i}">${cardgame.aiboard[i].name}</div>`;
-            console.log('Ai board at ' + i + ': ' + cardgame.aiboard[i].name);
+            wpicture += `<div id="aiboard-${i}" class="aiCards">${cardgame.aiboard[i].name}</div>`;
         }
         wpicture += `</div>`
         wpicture += `<br>`;
-        wpicture += `<div id="playerboard">`;
+        wpicture += `<div id="playerBoard">`;
         for (let i = 0; i < cardgame.playerboard.length; i++) {
             // if (cardgame.playerhand[i].id !== 50) {
             // wpicture += `<div id="playerhand-${i}>${cardgame.playerhand[i].cardimg}</div>`
-            wpicture += `<div id="playerboard-${i}"><p>${cardgame.playerboard[i].name}</p></div>`;
+            wpicture += `<div id="playerboard-${i}" class="playerBoardCards"><p>${cardgame.playerboard[i].name}</p></div>`;
+
             // }
         }
         wpicture += `</div>`;
         wpicture += `<br>`;
         //Pulls in our hand and gives each card a id of
         //playerhand-0,playerhand-1, and so forth till 6 (7 total)
-        wpicture += `<div id="playerHand">`
+        wpicture += `<button id="endTurn" type="button">End Turn</button>`;
+        wpicture += `<div id="playerDeck">Cards Left: ${cardgame.playerDeck.length}</div>`;
+        wpicture += `<div id="playerHand">`;
         ////////////////////////////////////////BIG NEED TO FIX  Draw isn't working???
         for (let i = 0; i < cardgame.playerhand.length; i++) {
             // if (cardgame.playerhand[i].id !== 50) {
             // wpicture += `<div id="playerhand-${i}>${cardgame.playerhand[i].cardimg}</div>`
-            wpicture += `<div id="playerhand-${i}"><p>${cardgame.playerhand[i].name}</p></div>`
+            wpicture += `<div id="playerhand-${i}" class="playerCards"><p>${cardgame.playerhand[i].name}</p></div>`
 
             // }
         }
-        wpicture += `<button id="endTurn" type="button">End Turn</button>`;
-
+        wpicture += `<div id="playerData">You<br><div id="playerHealth">${cardgame.playerMana}</div>`;
         wpicture += `</div>`;
-        wpicture += `<div id="playerDeck">Cards Left in your deck: ${cardgame.playerDeck.length}</div>`
-        wpicture += `<br>`;
-        wpicture += `<div id="playerHealth">Your Health: ${cardgame.playerMana}</div>`;
     }
     loadboard();
+    if (player34 === true) {
+        if (cardgame.playerMana > 50) {
+            cardgame.playerMana === 50;
+        }
+    }
+    if (cardgame.ai34 === true) {
+        if (cardgame.aiMana > 50) {
+            cardgame.aiMana === 50;
+        }
+    }
+    if(cardgame.playerMana>0){
     $root.empty();
     $root.append(wpicture);
-
+    }
+    else{
+        lose();
+    }
 }
 
 function wikipage() {
@@ -293,10 +258,14 @@ function wikipage() {
     let x = ``
     $root.html(' ');
     //Need to work with how we access card database.
+    x += `<div><input type="text" id="search"/>`
+    x += `<button type="button" id="searchButton">Search</button></div>`;
+    x += `<div id="searchDiv" style="display:none"><a href="" id="searchLink">Go to Card</a></div>`
+    // does not autocomplete yet
     for (let i = 0; i < 50; i++) {
+        // <div id="card-${cardData[i].id}">` +
         x += `<div id="card-${cardData[i].id}">` +
-
-            `<h3 id="title">${cardData[i].name}</h3>` +
+            `<h3 id="${cardData[i].id}">${cardData[i].name}</h3>` +
             `<p id="img"><img src="/graphics/cards/${cardData[i].name}.img"></p>` +
             `<p id="ability">${cardData[i].abilityName}: ${cardData[i].abilityDescription}</p>` +
             `<p id="attdef">Attack: ${cardData[i].attack} Defense: ${cardData[i].defense}</p>` +
@@ -304,7 +273,34 @@ function wikipage() {
             `<p id="type">Type: ${cardData[i].type}</p>` +
             `</div><br>`;
     }
+    x += `<button id="wiki-back-to-home">Go Back</button>`
     $root.append(x);
+    let results = ["Kris Jordan", "Departmental King, KMP", "The Eternal One: David Plaisted",
+        "COMP110 TA", "Office Hours", "Curve", "Stack Overflow", "Exam", "Snoeyink the Origami Lord",
+        "Anish, the Prankster", "Comp Sci Overcrowding!", "Sitterson Pizza Event", "Legendary TA Rosh",
+        "Robotics Lord Ron Alterovitz", "Legendary Professor Bishop: Destroyer of Worlds", "WeedOut Classes",
+        "BS to BA", "Caffeine Addiction", "Mips Rush", "Sitterson: Departmental Home", "Procrastinate",
+        "Coding Passion", "Djisktras Algorithm", "Legendary Professor: Montek", "Legendary Professor: McMillan the Villain",
+        "Echoes of the Past: Pozefsky", "Classmates in Genome 100", "Internship", "BA to BS", "Computer Science Friends",
+        "Computer Science Enemies", "Good Study Group", "Bad Study Group", "Code Leech", "Honour Court",
+        "Switch to Comp Minor", "Hackathon", "Tech Job Fair", "Fred Brooks", "Pearl Hacks",
+        "Obscure Youtube Coding Tutorial Channel", "Comp 426 Selfie", "Crying in the Sitterson Bathroom",
+        "Kurama", "Rate my Professor", "Skipping Class", "Bug", "The Meme Shit Post Groupme", "CPU Hat",
+        "Graduation"];
+    $("#search").autocomplete({
+        source: results
+    });
+}
+function search() {
+    let name = document.getElementById("search").value;
+    let x = "#";
+    for (let i = 0; i < 50; i++) {
+        if (name === cardData[i].name) {
+            x += cardData[i].id;
+        }
+    }
+    $("#searchLink").attr("href", x);
+    document.getElementById("searchDiv").style.display = "block";
 }
 
 function cardPlay(x, y) {
@@ -312,16 +308,14 @@ function cardPlay(x, y) {
 }
 
 //JINKIES FUCKING SCOOBEROOO
-function cardAttack(x) {
-    //If it exists?
-
-}
 
 function lose() {
+    const $root = $('#root');
     let x = ``;
     x += `<div id="loseScreen"> You lose.  Take another year at UNC.<div>`;
     x += `<button type="button" id="playAgain">Play Again</div>`;
     x += `<button type="button" id="landAgain">Back to Home Page</div>`;
+    $root.empty();
     $root.append(x);
 }
 
@@ -343,16 +337,16 @@ function loadModal() {
 
     <!-- Modal Content -->
     <form class="modal-content animate">
-        <div class="container">
+
+        <div class="container" id="loginFormContent">
             <label for="email"><b>Email</b></label><br>
             <input type="text" placeholder="Enter Email" name="email" id="email" required><br><br>
 
             <label for="psw"><b>Password</b></label><br>
             <input type="password" placeholder="Enter Password" name="psw" id="password" required><br><br>
 
-            <button type="submit" id="loginSubmit">Login</button>
-            <button type="submit" id="createAccount">Create Account</button><br><br>
-
+            <button type="button" id="loginSubmit">Login</button>
+            <button type="button" id="createAccount">Create Account</button><br><br>
             <div id="my-signin2"></div><br>
         </div>
 
@@ -360,8 +354,8 @@ function loadModal() {
             <button type="button" onclick="document.getElementById('loginForm').style.display='none'" class="cancelbtn">Cancel</button>
             <span class="psw"><a href="forgotPassword.html">Forgot password?</a></span>
         </div>
-    </form>
-    `
+
+    </form>`;
     $loginForm.append(form);
 }
 
@@ -394,6 +388,7 @@ function howToPage() {
     <hr>
     <h4 class="head">End of Game</h4>
     <p>The game ends when one of the players goes down to 0 health.</p>
+    <br><button id="how-to-back-to-home">Go Back</button>
     `
     $root.append(text);
 }
@@ -415,44 +410,148 @@ $(function () {
 
     $(document).on('click', '#wiki', function () { wikipage(); })
     $(document).on('click', '#howTo', howToPage)
-
     $(document).on('click', '#loginSubmit', toggleSignIn);
     $(document).on('click', '#createAccount', handleSignUp);
-    $(document).on('click', '#my-signin2', toggleSignInWithGoogle);
     $(document).on('submit', '#resetPassword', handleResetEmail);
 
     //Templates for xon clicks of cards and various items, need changes later ~~~~~Don't change the one above
     // whatever was above this appears to be gone lol
     $(document).on('click', '#playerhand-0', function () {
-        cardPlay(0, true); update(); win();
+        if (cardgame.playerhand[0].id === 34) {
+            player34 = true;
+        }
+        if (cardgame.playerhand[0].id === 36) {
+            let j = 0;
+            for (let i = 0; i < 5; i++) {
+                if (j === 2) {
+                    break;
+                }
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(i, true);
+                    j++
+                }
+
+            }
+        }
+
+        if (cardgame.playerhand[0].id != 49) {
+            cardPlay(0, true); update();
+        } else {
+            win();
+        }
     })
     $(document).on('click', '#playerhand-1', function () {
-        cardPlay(1, true); update();
+        if (cardgame.playerhand[1].id === 34) {
+            player34 = true;
+        }
+        if (cardgame.playerhand[1].id === 36) {
+            let j = 0;
+            for (let i = 0; i < 5; i++) {
+                if (j === 2) {
+                    break;
+                }
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(i, true);
+                    j++
+                }
+
+            }
+        }
+        if (cardgame.playerhand[1].id != 49) {
+            cardPlay(1, true); update();
+        } else {
+            win();
+        }
     })
     $(document).on('click', '#playerhand-2', function () {
-        cardPlay(2, true); update();
+        if (cardgame.playerhand[2].id === 34) {
+            player34 = true;
+        }
+        if (cardgame.playerhand[2].id === 36) {
+            let j = 0;
+            for (let i = 0; i < 5; i++) {
+                if (j === 2) {
+                    break;
+                }
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(i, true);
+                    j++
+                }
+
+            }
+        }
+        if (cardgame.playerhand[2].id != 49) {
+            cardPlay(2, true); update();
+        } else {
+            win();
+        }
+
     })
     $(document).on('click', '#playerhand-3', function () {
-        cardPlay(3, true); update();
+        if (cardgame.playerhand[3].id === 36) {
+            for (let i = 0; i < 5; i++) {
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(1, true);
+                }
+            }
+        }
+        if (cardgame.playerhand[3].id === 36) {
+            let j = 0;
+            for (let i = 0; i < 5; i++) {
+                if (j === 2) {
+                    break;
+                }
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(i, true);
+                    j++
+                }
+
+            }
+        }
+        if (cardgame.playerhand[3].id != 49) {
+            cardPlay(3, true); update();
+        } else {
+            win();
+        }
     })
     $(document).on('click', '#playerhand-4', function () {
-        cardPlay(4, true); update();
+        if (cardgame.playerhand[4].id === 34) {
+            player34 = true;
+        }
+        if (cardgame.playerand[4].id === 36) {
+            let j = 0;
+            for (let i = 0; i < 5; i++) {
+                if (j === 2) {
+                    break;
+                }
+                if (cardgame.playerhand[i].id < 50) {
+                    cardgame.destroyed(i, true);
+                    j++
+                }
+
+            }
+        }
+        if (cardgame.playerhand[4].id != 49) {
+            cardPlay(4, true); update();
+        } else {
+            win();
+        }
     })
 
     $(document).on('click', '#playerboard-0', function () {
-        console.log('is this shit clicking?0')
+
         if (playerattacked[0] === false) {
             for (let i = 0; i < 5; i++) {
                 playeratt[i] = false;
             }
             playeratt[0] = true;
-            console.log('This is Playeratt[0] and playerattacked[0]: ' + playeratt[0] + ' ' + playerattacked[0])
+
         }
 
     })
 
     $(document).on('click', '#playerboard-1', function () {
-        console.log('is this shit clicking?1')
+
 
         if (playerattacked[1] === false) {
             for (let i = 0; i < 5; i++) {
@@ -463,7 +562,7 @@ $(function () {
     })
 
     $(document).on('click', '#playerboard-2', function () {
-        console.log('is this shit clicking?2')
+
 
         if (playerattacked[2] === false) {
             for (let i = 0; i < 5; i++) {
@@ -474,7 +573,7 @@ $(function () {
     })
 
     $(document).on('click', '#playerboard-3', function () {
-        console.log('is this shit clicking?3')
+
 
         if (playerattacked[3] === false) {
             for (let i = 0; i < 5; i++) {
@@ -485,7 +584,7 @@ $(function () {
     })
 
     $(document).on('click', '#playerboard-4', function () {
-        console.log('is this shit clicking?4')
+
 
         if (playerattacked[4] === false) {
             for (let i = 0; i < 5; i++) {
@@ -540,34 +639,77 @@ $(function () {
         }
         update();
     });
-    
-    $(document).on('click', '#aiHealth', function () {
-        for (let i = 0; i < 5; i++) {
-            if (playerattacked[i] === false && playeratt[i] === true) {
-                cardgame.attackPlayer(i, false);
-                playerattacked[i] = true;
-            }
+
+
+});
+//$(document).on('click', '#aiboard-1', function () { cardAttack()});
+//$(document).on('click', '#aiboard-2', function () { cardAttack()});
+//$(document).on('click', '#aiboard-3', function () { cardAttack()});
+//$(document).on('click', '#aiboard-4', function () { cardAttack()});
+
+
+$(document).on('click', '#searchButton', function () { search() });
+
+
+$(document).on('click', '#aiHealth', function () {
+    for (let i = 0; i < 5; i++) {
+        if (playerattacked[i] === false && playeratt[i] === true) {
+            cardgame.attackPlayer(i, false);
+            playerattacked[i] = true;
         }
-        update();
-        console.log(cardgame.aiMana)
-    });
+    }
+    update();
+
+});
 
 
-    $(document).on('click', '#playAgain', function () {
-        startgame();
-    })
-
-    $(document).on('click', '#endTurn', function () {
-        cardgame.endTurn();
-        for (let i = 0; i < 5; i++) {
-            playerattacked[i] = false;
-        }
-        //insert ai function call
-        cardgame.AI();
-        update();
-
-    })
-    $(document).on('click', '#landAgain', function () {
-        landingPage();
-    })
+$(document).on('click', '#playAgain', function () {
+    startgame();
 })
+$(document).on('click', '#endTurn', function () {
+
+    cardgame.endTurn();
+    for (let i = 0; i < 5; i++) {
+        console.log(cardgame.playerboard[i])
+        if(cardgame.playerboard[i]!=undefined){
+        if (cardgame.playerboard[i].id === 0) {
+            cardgame.playerMana += 2;
+        }
+        if (cardgame.playerboard[i].id === 30) {
+            cardgame.playerMana += 2;
+        }
+        if (cardgame.playerboard[i].id === 31) {
+            cardgame.playerMana -= 2;
+        }
+        if (cardgame.playerboard[i].id === 32) {
+            //Ask jill about precise wording;
+            cardgame.playerMana -= 1;
+            cardgame.aiMana -= 1;
+        }
+        if (cardgame.playerboard[i].id === 34) {
+            if (cardgame.playerMana > 50) {
+                cardgame.playerMana = 50;
+            }
+
+        }
+    }
+
+        playerattacked[i] = false;
+    }
+    //Kris Jordan specialty Check;
+
+    cardgame.AI();
+    update();
+
+});
+$(document).on('click', '#landAgain', function () {
+    landingPage();
+});
+$(document).on('click', '#wiki-back-to-home', function () {
+    landingPage();
+});
+$(document).on('click', '#how-to-back-to-home', function () {
+    landingPage();
+});
+
+
